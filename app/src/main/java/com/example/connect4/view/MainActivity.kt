@@ -1,4 +1,4 @@
-package com.example.connect4
+package com.example.connect4.view
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
