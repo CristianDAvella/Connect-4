@@ -5,6 +5,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.example.connect4.model.GameCellState
+import kotlinx.coroutines.*
+import androidx.lifecycle.viewModelScope
+
 
 class GameViewModel : ViewModel() {
 
@@ -17,24 +20,40 @@ class GameViewModel : ViewModel() {
     var gameState by mutableStateOf(GameStatus("Player's Turn"))
         private set
 
+    var animatingRow by mutableStateOf(-1)
+        private set
+
+    var animatingColumn by mutableStateOf(-1)
+        private set
+
+    var isAnimating by mutableStateOf(false)
+        private set
+
+    var animatingPlayer: GameCellState? by mutableStateOf(null)
+        private set
+
+
     fun playMove(col: Int) {
-        if (gameState.finished) return
+        if (gameState.finished || isAnimating) return
 
         val row = board.indexOfLast { it[col] == GameCellState.EMPTY }
         if (row == -1) return
 
-        board[row][col] = if (isPlayerTurn) GameCellState.PLAYER else GameCellState.AI
+        animateDrop(col, row) {
+            board[row][col] = if (isPlayerTurn) GameCellState.PLAYER else GameCellState.AI
 
-        if (checkVictory(row, col)) {
-            gameState = GameStatus("${if (isPlayerTurn) "Player" else "AI"} Wins!", true)
-        } else if (isBoardFull()) {
-            gameState = GameStatus("Draw!", true)
-        } else {
-            isPlayerTurn = !isPlayerTurn
-            if (!isPlayerTurn) {
-                aiMove()
+            if (checkVictory(row, col)) {
+                gameState = GameStatus("${if (isPlayerTurn) "Player" else "AI"} Wins!", true)
+            } else if (isBoardFull()) {
+                gameState = GameStatus("Draw!", true)
             } else {
-                gameState = GameStatus("Player's Turn")
+                isPlayerTurn = !isPlayerTurn
+                if (!isPlayerTurn) {
+                    gameState = GameStatus("AI's Turn")
+                    aiMove()
+                } else {
+                    gameState = GameStatus("Player's Turn")
+                }
             }
         }
     }
@@ -50,6 +69,26 @@ class GameViewModel : ViewModel() {
     private fun isBoardFull(): Boolean {
         return board.all { row -> row.none { it == GameCellState.EMPTY } }
     }
+
+
+    fun animateDrop(column: Int, finalRow: Int, onComplete: () -> Unit) {
+        animatingPlayer = if (isPlayerTurn) GameCellState.PLAYER else GameCellState.AI
+        isAnimating = true
+
+        viewModelScope.launch {
+            for (row in 0..finalRow) {
+                animatingRow = row
+                animatingColumn = column
+                delay(100)
+            }
+            animatingRow = -1
+            animatingColumn = -1
+            isAnimating = false
+            animatingPlayer = null
+            onComplete()
+        }
+    }
+
 
     private fun checkVictory(row: Int, col: Int): Boolean {
         val player = board[row][col]
