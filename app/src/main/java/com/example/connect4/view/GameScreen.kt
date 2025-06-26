@@ -1,91 +1,129 @@
 package com.example.connect4.view
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import com.example.connect4.viewmodel.GameViewModel
 import com.example.connect4.model.GameCellState
-import androidx.compose.ui.platform.LocalConfiguration
-import android.content.res.Configuration
 
 @Composable
 fun GameScreen(viewModel: GameViewModel) {
     val board = viewModel.board
     val gameState = viewModel.gameState
 
-    // Get screen dimensions and orientation
+    // Pregunta inicial al entrar en la pantalla
+    LaunchedEffect(Unit) {
+        viewModel.askTranslation()
+    }
+
+    // Obtener orientación y tamaño de pantalla
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
     val screenHeight = configuration.screenHeightDp.dp
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
-    // Set top spacer height based on orientation
     val topSpacerHeight = if (isLandscape) 16.dp else 170.dp
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1B2B34)) // Set background color for the board
+            .background(Color(0xFF1B2B34))
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Add vertical space above the board depending on orientation
         Spacer(modifier = Modifier.height(topSpacerHeight))
 
-        // Display current game status (e.g., turn info, winner message)
         Text(
             text = gameState.statusText,
             color = Color.White,
             style = MaterialTheme.typography.headlineMedium
         )
 
-        // Calculate the cell size based on screen orientation
-        val cellSize = if (screenWidth > screenHeight) {
-            screenWidth / 8 // Smaller cells in landscape
-        } else {
-            screenWidth / 7 // Larger cells in portrait
+        // Mostrar pregunta de traducción si es necesario
+        if (viewModel.showTranslationPrompt && !gameState.finished) {
+            val word = viewModel.currentWordPair
+            var answer by remember { mutableStateOf("") }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Translate: ${word?.english ?: ""}",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                TextField(
+                    value = answer,
+                    onValueChange = { answer = it },
+                    label = { Text("Enter translation") },
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFF2A3A44),
+                        unfocusedContainerColor = Color(0xFF2A3A44),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedLabelColor = Color.White,
+                        unfocusedLabelColor = Color.Gray
+                    )
+                )
+
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(onClick = {
+                    viewModel.checkTranslation(answer)
+                    answer = ""
+                }) {
+                    Text("Submit")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Iterate over rows and columns to create the game board
+        // Crear tablero
         for (row in 0 until 6) {
             Row {
                 for (col in 0 until 7) {
                     val cell = board[row][col]
                     val isAnimating = row == viewModel.animatingRow && col == viewModel.animatingColumn
 
-                    // Determine cell color based on its state (empty, player, AI, animation)
                     val cellColor = when {
-                        isAnimating && viewModel.animatingPlayer == GameCellState.PLAYER -> Color(0xFFE57373) // Animation for player
-                        isAnimating && viewModel.animatingPlayer == GameCellState.AI -> Color(0xFF4DB6AC) // Animation for AI
-                        cell == GameCellState.PLAYER -> Color(0xFFE57373) // Static cell for player
-                        cell == GameCellState.AI -> Color(0xFF4DB6AC) // Static cell for AI
-                        else -> Color(0xFF0F1A20) // Empty cell
+                        isAnimating && viewModel.animatingPlayer == GameCellState.PLAYER -> Color(0xFFE57373)
+                        isAnimating && viewModel.animatingPlayer == GameCellState.PLAYER2 -> Color(0xFF4DB6AC)
+                        cell == GameCellState.PLAYER -> Color(0xFFE57373)
+                        cell == GameCellState.PLAYER2 -> Color(0xFF4DB6AC)
+                        else -> Color(0xFF0F1A20)
                     }
 
-                    // Draw each game cell with clickable action if it's player's turn and not animating
                     Box(
                         modifier = Modifier
-                            .size(48.dp) // Fixed size for all cells
-                            .padding(4.dp) // Padding around each cell
-                            .background(color = cellColor, shape = CircleShape) // Circular cell with specific color
+                            .size(48.dp)
+                            .padding(4.dp)
+                            .background(color = cellColor, shape = CircleShape)
                             .clickable(
-                                enabled = viewModel.isPlayerTurn && !viewModel.isAnimating
+                                enabled = viewModel.canPlay && !viewModel.isAnimating
                             ) {
-                                viewModel.playMove(col) // Make a move in the selected column
+                                viewModel.playMove(col)
                             }
                     )
                 }
             }
         }
 
-        // Restart button to reset the game state
+        Spacer(modifier = Modifier.height(16.dp))
+
         Button(onClick = { viewModel.resetGame() }) {
             Text("Restart Game")
         }
