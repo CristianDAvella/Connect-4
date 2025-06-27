@@ -14,18 +14,21 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import com.example.connect4.viewmodel.GameViewModel
 import com.example.connect4.model.GameCellState
+import com.example.connect4.service.FirebaseGameService
 
 @Composable
-fun GameScreen(viewModel: GameViewModel) {
+fun GameScreen(
+    viewModel: GameViewModel,
+    firebaseService: FirebaseGameService,
+    playerRole: String
+) {
     val board = viewModel.board
     val gameState = viewModel.gameState
 
-    // Pregunta inicial al entrar en la pantalla
     LaunchedEffect(Unit) {
         viewModel.askTranslation()
     }
 
-    // Obtener orientación y tamaño de pantalla
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
     val screenHeight = configuration.screenHeightDp.dp
@@ -47,7 +50,6 @@ fun GameScreen(viewModel: GameViewModel) {
             style = MaterialTheme.typography.headlineMedium
         )
 
-        // Mostrar pregunta de traducción si es necesario
         if (viewModel.showTranslationPrompt && !gameState.finished) {
             val word = viewModel.currentWordPair
             var answer by remember { mutableStateOf("") }
@@ -78,7 +80,6 @@ fun GameScreen(viewModel: GameViewModel) {
                     )
                 )
 
-
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Button(onClick = {
@@ -92,7 +93,6 @@ fun GameScreen(viewModel: GameViewModel) {
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Crear tablero
         for (row in 0 until 6) {
             Row {
                 for (col in 0 until 7) {
@@ -113,7 +113,9 @@ fun GameScreen(viewModel: GameViewModel) {
                             .padding(4.dp)
                             .background(color = cellColor, shape = CircleShape)
                             .clickable(
-                                enabled = viewModel.canPlay && !viewModel.isAnimating
+                                enabled = viewModel.canPlay && !viewModel.isAnimating &&
+                                        ((playerRole == "player1" && viewModel.isPlayerTurn) ||
+                                                (playerRole == "player2" && !viewModel.isPlayerTurn))
                             ) {
                                 viewModel.playMove(col)
                             }

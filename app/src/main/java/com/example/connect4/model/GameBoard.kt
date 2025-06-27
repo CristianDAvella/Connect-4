@@ -2,7 +2,7 @@ package com.example.connect4.model
 
 class GameBoard {
     var board: List<MutableList<GameCellState>> = List(6) { MutableList(7) { GameCellState.EMPTY } }
-        private set
+
 
     fun reset() {
         board = List(6) { MutableList(7) { GameCellState.EMPTY } }

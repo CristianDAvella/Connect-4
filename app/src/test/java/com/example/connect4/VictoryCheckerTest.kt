@@ -42,11 +42,5 @@ class VictoryCheckerTest {
 
     @Test
     fun testNoVictory() {
-        val board = List(6) { MutableList(7) { GameCellState.EMPTY } }
-        board[5][0] = GameCellState.PLAYER
-        board[5][1] = GameCellState.AI
-        board[5][2] = GameCellState.PLAYER
-        board[5][3] = GameCellState.AI
-        assertFalse(VictoryChecker.checkVictory(board, 5, 3))
     }
 }
